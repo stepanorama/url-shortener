@@ -13,7 +13,7 @@ func init() {
 	storage.URLMap = map[string]string{}
 }
 
-func randString(n int) string {
+func RandString(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
