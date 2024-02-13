@@ -1,3 +1,3 @@
 package storage
 
-var URLMap map[string]string // creating empty map for storing URLs
+var URLMap map[string]string // Creating empty map for storing URLs
