@@ -3,17 +3,9 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/stepanorama/url-shortener/internal/app/storage"
-	"math/rand"
+	"github.com/stepanorama/url-shortener/internal/app/utils"
 	"net/http"
-	"time"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-	storage.URLMap = map[string]string{}
-}
-
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func CreateShortURL(c *gin.Context) {
 	c.Header("content-type", "text/plain; charset=utf-8")
@@ -32,7 +24,7 @@ func CreateShortURL(c *gin.Context) {
 	if c.Request.TLS != nil {
 		scheme = "https"
 	}
-	shortURL := randString(10)
+	shortURL := utils.RandString(10)
 	storage.URLMap[shortURL] = string(body)
 	c.String(http.StatusCreated, "%v://%v%v%v", scheme, c.Request.Host, c.Request.RequestURI, shortURL)
 }
@@ -46,14 +38,6 @@ func GetFullURL(c *gin.Context) {
 	} else {
 		c.Status(http.StatusBadRequest)
 	}
-}
-
-func randString(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
 }
 
 func errorResponse(err string) gin.H {
