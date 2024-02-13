@@ -9,7 +9,7 @@ import (
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func init() {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
+	rand.New(rand.NewSource(time.Now().UnixNano())) // Replace deprecated rand.Seed()
 	storage.URLMap = map[string]string{}
 }
 
