@@ -1,60 +1,122 @@
-package main
+package handlers
 
 import (
-	"bufio"
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/stepanorama/url-shortener/internal/app/handlers"
+	"github.com/stepanorama/url-shortener/internal/app/storage"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
+	"testing"
 )
 
-func main() {
-	endpoint := "http://localhost:8080/"
-	// Request data container
-	data := url.Values{}
-	// Command line prompt
-	fmt.Println("Enter full URL")
-	// Opens stream reading from the prompt
-	reader := bufio.NewReader(os.Stdin)
-	// Reading line from prompt
-	long, err := reader.ReadString('\n')
-	if err != nil {
-		panic(err)
+func SetUpRouter() *gin.Engine {
+	router := gin.Default()
+	return router
+}
+
+func TestCreateShortURL(t *testing.T) {
+	type want struct {
+		code                   int
+		responseBodyIsNotEmpty bool
+		contentType            string
 	}
-	long = strings.TrimSuffix(long, "\n")
-	// Filling container with data
-	data.Set("url", long)
-	// Add http client
-	client := &http.Client{}
-	// Writing request.
-	// POST request has to contain both headers and body.
-	// Body has to be a source for io.Reader.
-	request, err := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(data.Encode()))
-	if err != nil {
-		panic(err)
+	tests := []struct {
+		name        string
+		request     string
+		requestBody string
+		want        want
+	}{
+		{
+			name:        "positive test #1",
+			request:     "/",
+			requestBody: "https://practicum.yandex.ru/",
+			want: want{
+				code:                   201,
+				responseBodyIsNotEmpty: true,
+				contentType:            "text/plain; charset=utf-8",
+			},
+		},
+		{
+			name:        "negative test - body is empty",
+			request:     "/",
+			requestBody: "",
+			want: want{
+				code:                   400,
+				responseBodyIsNotEmpty: false,
+				contentType:            "text/plain; charset=utf-8",
+			},
+		},
 	}
-	// Defines encoding in the request's header
-	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	// Sending request and getting response
-	response, err := client.Do(request)
-	if err != nil {
-		panic(err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bodyReader := strings.NewReader(tt.requestBody)
+
+			r := SetUpRouter()
+			r.POST("/", handlers.CreateShortURL)
+			req, _ := http.NewRequest(http.MethodPost, tt.request, bodyReader)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.want.code, w.Code)
+			assert.Equal(t, tt.want.contentType, w.Header().Get("Content-Type"))
+
+			resBody, _ := io.ReadAll(w.Body)
+			bodyIsNotEmpty := true
+			_, err := url.ParseRequestURI(string(resBody))
+			if err != nil {
+				bodyIsNotEmpty = false
+			}
+			assert.Equal(t, tt.want.responseBodyIsNotEmpty, bodyIsNotEmpty)
+		})
 	}
-	// Print response status code
-	fmt.Println("Status code:", response.Status)
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(response.Body)
-	// Reading the stream from the body
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		panic(err)
+}
+
+func TestGetFullURL(t *testing.T) {
+	type want struct {
+		code               int
+		locationIsNotEmpty bool
 	}
-	// Printing the stream
-	fmt.Println(string(body))
+	tests := []struct {
+		name    string
+		request string
+		want    want
+	}{
+		{
+			name:    "positive test #1",
+			request: "http://localhost:8080/sKtBWabUkV",
+			want: want{
+				code:               307,
+				locationIsNotEmpty: true,
+			},
+		},
+		{
+			name:    "negative test - no short URL",
+			request: "http://localhost:8080/fail",
+			want: want{
+				code:               400,
+				locationIsNotEmpty: false,
+			},
+		},
+	}
+
+	//temporary storage solution
+	storage.URLMap = map[string]string{}
+	storage.URLMap["sKtBWabUkV"] = "https://go.dev/tour/welcome/1"
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := SetUpRouter()
+			r.POST("/:short_url", handlers.GetFullURL)
+			req, _ := http.NewRequest(http.MethodPost, tt.request, nil)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.want.code, w.Code)
+			assert.Equal(t, tt.want.locationIsNotEmpty, len(w.Header().Get("Location")) > 0)
+		})
+	}
 }
