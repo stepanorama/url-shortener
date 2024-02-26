@@ -17,7 +17,13 @@ func SetUpRouter() *gin.Engine {
 	return router
 }
 
-func TestCreateShortURL(t *testing.T) {
+func TestURLHandler_CreateShortURL(t *testing.T) {
+	mockStorer := storage.NewMapStorage()
+	urlHandler := NewURLHandler(mockStorer) // Use the mock storer
+
+	router := SetUpRouter()
+	router.POST("/", urlHandler.CreateShortURL) // Attach the handler
+
 	type want struct {
 		code                   int
 		responseBodyIsNotEmpty bool
@@ -55,7 +61,10 @@ func TestCreateShortURL(t *testing.T) {
 			bodyReader := strings.NewReader(tt.requestBody)
 
 			r := SetUpRouter()
-			r.POST("/", CreateShortURL)
+			r.POST(
+				"/",
+				urlHandler.CreateShortURL,
+			)
 			req, _ := http.NewRequest(http.MethodPost, tt.request, bodyReader)
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
@@ -74,7 +83,10 @@ func TestCreateShortURL(t *testing.T) {
 	}
 }
 
-func TestGetFullURL(t *testing.T) {
+func TestURLHandler_GetFullURL(t *testing.T) {
+	mockStorer := storage.NewMapStorage()
+	urlHandler := NewURLHandler(mockStorer) // Mock storer
+
 	type want struct {
 		code               int
 		locationIsNotEmpty bool
@@ -102,13 +114,16 @@ func TestGetFullURL(t *testing.T) {
 		},
 	}
 
-	storage.URLMap = map[string]string{}
-	storage.URLMap["sKtBWabUkV"] = "https://go.dev/tour/welcome/1"
+	// storage.URLMap = map[string]string{}
+	// storage.URLMap["sKtBWabUkV"] = "https://go.dev/tour/welcome/1"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := SetUpRouter()
-			r.POST("/:short_url", GetFullURL)
+			r.POST(
+				"/:short_url",
+				urlHandler.GetFullURL,
+			)
 			req, _ := http.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
