@@ -114,17 +114,20 @@ func TestURLHandler_GetFullURL(t *testing.T) {
 		},
 	}
 
+	shortURL := "sKtBWabUkV"
+	fullURL := "https://go.dev/tour/welcome/1"
+	mockStorer.StoreURL(shortURL, fullURL)
+
 	// storage.URLMap = map[string]string{}
 	// storage.URLMap["sKtBWabUkV"] = "https://go.dev/tour/welcome/1"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := SetUpRouter()
-			r.POST(
-				"/:short_url",
-				urlHandler.GetFullURL,
-			)
-			req, _ := http.NewRequest(http.MethodPost, tt.request, nil)
+
+			r.GET("/:short_url", urlHandler.GetFullURL)
+
+			req, _ := http.NewRequest(http.MethodGet, tt.request, nil)
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 

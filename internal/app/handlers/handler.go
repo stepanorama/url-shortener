@@ -40,8 +40,9 @@ func (h *URLHandler) CreateShortURL(c *gin.Context) {
 		scheme = "https"
 	}
 	shortURL := utils.RandString(10)
-	// previous soulution storage.URLMap[shortURL] = string(body)
+	// previous solution storage.URLMap[shortURL] = string(body)
 	h.storer.StoreURL(shortURL, string(body))
+
 	c.String(http.StatusCreated, "%v://%v%v%v", scheme, c.Request.Host, c.Request.RequestURI, shortURL)
 }
 
