@@ -2,12 +2,27 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/stepanorama/url-shortener/internal/app/storage"
 	"github.com/stepanorama/url-shortener/internal/app/utils"
 	"net/http"
 )
 
-func CreateShortURL(c *gin.Context) {
+// URLStorer defines the interface for URL storage operations. We're going to use it as a dependency for our handler.
+// see example https://bryanftan.medium.com/accept-interfaces-return-structs-in-go-d4cab29a301b
+type URLStorer interface {
+	StoreURL(shortURL, fullURL string) error
+	RetrieveURL(shortURL string) (string, bool)
+}
+
+type URLHandler struct {
+	storer URLStorer
+}
+
+func NewURLHandler(storer URLStorer) *URLHandler {
+	return &URLHandler{storer: storer}
+}
+
+func (h *URLHandler) CreateShortURL(c *gin.Context) {
+	// Implementation similar to the original, but use h.storer to store the URL
 	c.Header("content-type", "text/plain; charset=utf-8")
 	body, err := c.GetRawData()
 	if err != nil {
@@ -25,14 +40,16 @@ func CreateShortURL(c *gin.Context) {
 		scheme = "https"
 	}
 	shortURL := utils.RandString(10)
-	storage.URLMap[shortURL] = string(body)
+	// previous soulution storage.URLMap[shortURL] = string(body)
+	h.storer.StoreURL(shortURL, string(body))
 	c.String(http.StatusCreated, "%v://%v%v%v", scheme, c.Request.Host, c.Request.RequestURI, shortURL)
 }
 
-func GetFullURL(c *gin.Context) {
+func (h *URLHandler) GetFullURL(c *gin.Context) {
+	// Implementation similar to the original, but use h.storer to retrieve the URL
 	shortURL := c.Params.ByName("short_url")
 
-	if fullURL, ok := storage.URLMap[shortURL]; ok {
+	if fullURL, ok := h.storer.RetrieveURL(shortURL); ok {
 		c.Header("Location", fullURL)
 		c.Status(http.StatusTemporaryRedirect)
 	} else {

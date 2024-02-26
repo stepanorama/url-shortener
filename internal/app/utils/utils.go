@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"github.com/stepanorama/url-shortener/internal/app/storage"
 	"math/rand"
 	"time"
 )
@@ -10,7 +9,7 @@ var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func init() {
 	rand.New(rand.NewSource(time.Now().UnixNano())) // Replace deprecated rand.Seed()
-	storage.URLMap = map[string]string{}
+	// storage.URLMap = map[string]string{}
 }
 
 func RandString(n int) string {
